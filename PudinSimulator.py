@@ -67,9 +67,6 @@ class PUDIN_PT_Panel(bpy.types.Panel):
 
                 layout.operator("object.aplicar_parametros_pudin", text="Aplicar Parámetros")
                 
-                if not obj.pudin_multiplier_sucess and obj.pudin_multiplicador != 1:
-                    layout.operator("object.aplicar_multiplicador_pudin", text="Aplicar Multiplicador")
-                
                 layout.separator()
                 layout.label(text="Bake")
                 
@@ -115,6 +112,9 @@ class OBJECT_OT_AplicarParametrosPudin(bpy.types.Operator):
                     obj.pudin_first = False
                     
                     # Cambia estos valores la primera vez
+                    cloth.settings.tension_stiffness = 5.0
+                    cloth.settings.compression_stiffness = 5.0
+
                     cloth.settings.shear_stiffness_max = 10000.0
                     cloth.settings.bending_stiffness_max = 10000.0
                     cloth.settings.shrink_max = 1.0
@@ -135,49 +135,17 @@ class OBJECT_OT_AplicarParametrosPudin(bpy.types.Operator):
                  bending_stiffness, air_damping, inflado_interior, viscosidad) = calcular_parametros(masa, elasticidad, amortiguacion, inflado_interior, viscosidad, multiplicador)
                 
                 cloth.settings.mass = masa
-                cloth.settings.tension_stiffness = tension_stiffness
-                cloth.settings.compression_stiffness = compression_stiffness
+                
+                # Afectan al rendimiento
+                # cloth.settings.tension_stiffness = tension_stiffness
+                # cloth.settings.compression_stiffness = compression_stiffness
+                
                 cloth.settings.bending_stiffness = bending_stiffness
                 cloth.settings.air_damping = air_damping
                 cloth.settings.use_pressure = True
                 cloth.settings.uniform_pressure_force = inflado_interior
                 cloth.settings.fluid_density = viscosidad
-                
-                obj.pudin_multiplier_sucess = False
 
-        return {'FINISHED'}
-
-class OBJECT_OT_AplicarMultiplicadorPudin(bpy.types.Operator):
-    bl_label = "Aplicar Multiplicador Pudin"
-    bl_idname = "object.aplicar_multiplicador_pudin"
-    bl_options = {'REGISTER', 'UNDO'}
-    
-    def execute(self, context):
-        obj = context.object
-        if obj and obj.type == 'MESH':  
-            # Actualizar la propiedad
-            multiplicador = obj.pudin_multiplicador
-            
-            elasticidad = obj.pudin_original_elasticidad * multiplicador
-            amortiguacion = obj.pudin_original_amortiguacion * multiplicador
-            inflado_interior = obj.pudin_original_inflado_interior * multiplicador
-            viscosidad = obj.pudin_original_viscosidad * multiplicador
-            
-            obj.pudin_elasticidad = elasticidad
-            obj.pudin_amortiguacion = amortiguacion
-            obj.pudin_inflado_interior = inflado_interior
-            obj.pudin_viscosidad = viscosidad
-            
-            obj.pudin_original_elasticidad = elasticidad
-            obj.pudin_original_amortiguacion = amortiguacion
-            obj.pudin_original_inflado_interior = inflado_interior
-            obj.pudin_original_viscosidad = viscosidad
-            
-            # Restablecer el multiplicador a 1.0
-            obj.pudin_multiplicador = 1.0
-            obj.pudin_multiplier_sucess = True
-            
-            context.area.tag_redraw()
         return {'FINISHED'}
 
 class OBJECT_OT_EliminarModificadorPudin(bpy.types.Operator):
@@ -238,13 +206,11 @@ def update_original_values(self, context):
         obj.pudin_original_inflado_interior = obj.pudin_inflado_interior
         obj.pudin_original_viscosidad = obj.pudin_viscosidad
         obj.pudin_original_masa = obj.pudin_masa
-        obj.pudin_multiplicador = 1.0
         context.area.tag_redraw()  # Asegura que la interfaz se actualice
 
 def register():
     bpy.utils.register_class(PUDIN_PT_Panel)
     bpy.utils.register_class(OBJECT_OT_AplicarParametrosPudin)
-    bpy.utils.register_class(OBJECT_OT_AplicarMultiplicadorPudin)
     bpy.utils.register_class(OBJECT_OT_EliminarModificadorPudin)
     bpy.utils.register_class(OBJECT_OT_ToggleCorrectiveSmooth)
     bpy.utils.register_class(OBJECT_OT_HornearSimulacionPudin)
@@ -314,10 +280,6 @@ def register():
         name="Viscosidad Original",
         default=0.0
     )
-    bpy.types.Object.pudin_multiplier_sucess = bpy.props.BoolProperty(
-        name="Multiplier sucess",
-        default=False,
-    )
 
 def unregister():
     bpy.utils.unregister_class(PUDIN_PT_Panel)
@@ -339,7 +301,6 @@ def unregister():
     del bpy.types.Object.pudin_original_amortiguacion
     del bpy.types.Object.pudin_original_inflado_interior
     del bpy.types.Object.pudin_original_viscosidad
-    del bpy.types.Object.pudin_multiplier_sucess
 
 if __name__ == "__main__":
     register()
