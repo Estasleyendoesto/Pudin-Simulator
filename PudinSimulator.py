@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Pudin Simulator",
-    "description": "Simulador de pudin usando el simulador de tela y mediante un lenguaje comprensivo.",
+    "description": "Simulador de pudin mediante el simulador de tela y usando un lenguaje comprensivo.",
     "author": "Estasleyendoesto",
     "blender": (4, 2, 0),
     "category": "Object",
-    "version": (1, 1),
+    "version": (1, 2),
     "location": "Tool",
 }
 
@@ -20,6 +20,16 @@ def calcular_parametros(masa, elasticidad, amortiguacion, inflado_interior, visc
     inflado_interior = inflado_interior * multiplicador
     
     return tension_stiffness, compression_stiffness, bending_stiffness, air_damping, inflado_interior, viscosidad
+
+def actualizar_visibilidad_modificadores(obj, show_viewport, show_render):
+    cloth = obj.modifiers.get('Cloth')
+    smooth = obj.modifiers.get('Pudin Corrective Smooth')
+    if cloth:
+        cloth.show_viewport = show_viewport
+        cloth.show_render = show_render
+    if smooth:
+        smooth.show_viewport = show_viewport
+        smooth.show_render = show_render
 
 class PUDIN_PT_Panel(bpy.types.Panel):
     bl_label = "Pudin Simulator"
@@ -37,14 +47,27 @@ class PUDIN_PT_Panel(bpy.types.Panel):
             if cloth:
                 row = layout.row(align=True)
                 
+                # Corrective Smooth apply
                 smooth = obj.modifiers.get('Pudin Corrective Smooth')
                 dep = True if smooth else False
                 
                 row.operator("object.toggle_corrective_smooth", text="Corrective Smooth", depress=dep)
-                row.prop(cloth, "show_viewport", text="", icon='RESTRICT_VIEW_ON')
-                row.prop(cloth, "show_render", text="", icon='RESTRICT_RENDER_ON')
+                
+                # Render and Viewport Visibility
+                cloth = obj.modifiers.get('Cloth')
+                render_state = cloth.show_render
+                viewport_state = cloth.show_viewport
+                
+                render_icon_state = 'RESTRICT_RENDER_OFF' if render_state else 'RESTRICT_RENDER_ON'
+                viewport_icon_state = 'RESTRICT_VIEW_OFF' if viewport_state else 'RESTRICT_VIEW_ON'
+                
+                row.operator("object.toggle_viewport_visibility", text="", icon=viewport_icon_state, depress=viewport_state)
+                row.operator("object.toggle_render_visibility", text="", icon=render_icon_state, depress=render_state)
+                
+                # Delete modifiers
                 row.operator("object.eliminar_modificador_pudin", text="", icon='X')
                 
+                # ...
                 layout.separator()
                 layout.label(text="Pin Group")
                 layout.prop_search(cloth.settings, "vertex_group_mass", obj, "vertex_groups", text="")
@@ -58,7 +81,7 @@ class PUDIN_PT_Panel(bpy.types.Panel):
                 
                 layout.separator()
                 layout.label(text="Settings")
-                layout.prop(obj, 'pudin_masa', text="Peso (Masa)")
+                layout.prop(obj, 'pudin_masa', text="Peso")
                 layout.prop(obj, 'pudin_elasticidad', text="Elasticidad")
                 layout.prop(obj, 'pudin_amortiguacion', text="Amortiguación")
                 layout.prop(obj, 'pudin_inflado_interior', text="Inflado")
@@ -77,7 +100,7 @@ class PUDIN_PT_Panel(bpy.types.Panel):
                 layout.operator("object.hornear_simulacion_pudin", text="Hornear Simulación")         
                 layout.operator("object.eliminar_cache_pudin", text="Eliminar Caché")
             else:
-                layout.operator("object.aplicar_parametros_pudin", text="Aplicar Parámetros")
+                layout.operator("object.aplicar_parametros_pudin", text="Aplicar Simulador")
 
 class OBJECT_OT_AplicarParametrosPudin(bpy.types.Operator):
     bl_label = "Aplicar Parámetros Pudin"
@@ -123,7 +146,7 @@ class OBJECT_OT_AplicarParametrosPudin(bpy.types.Operator):
                     cloth.settings.effector_weights.charge = 0.0
                     cloth.settings.effector_weights.texture = 0.0
                     cloth.settings.effector_weights.turbulence = 0.0
-                    cloth.settings.effector_weights.drag = 0.0
+                    cloth.settings.effector_weights.drag = 0.45
                 
                 # Calcular parámetros con el multiplicador sobre los valores originales
                 elasticidad = obj.pudin_original_elasticidad
@@ -159,7 +182,20 @@ class OBJECT_OT_EliminarModificadorPudin(bpy.types.Operator):
             cloth = obj.modifiers.get('Cloth')
             smooth = obj.modifiers.get('Pudin Corrective Smooth')
             if cloth:
-                obj.modifiers.remove(cloth) 
+                obj.modifiers.remove(cloth)
+                
+                obj.pudin_original_masa = 0.3
+                obj.pudin_original_elasticidad = 1
+                obj.pudin_original_amortiguacion = 1
+                obj.pudin_original_inflado_interior = 0
+                obj.pudin_original_viscosidad = 0
+                
+                obj.pudin_masa = 0.3
+                obj.pudin_elasticidad = 1
+                obj.pudin_amortiguacion = 1
+                obj.pudin_inflado_interior = 0
+                obj.pudin_viscosidad = 0
+                obj.pudin_multiplicador = 1
             if smooth:
                 obj.modifiers.remove(smooth)
             
@@ -177,7 +213,35 @@ class OBJECT_OT_ToggleCorrectiveSmooth(bpy.types.Operator):
             if smooth:
                 obj.modifiers.remove(smooth)
             else:
-               smooth = obj.modifiers.new(name='Pudin Corrective Smooth', type='CORRECTIVE_SMOOTH')
+                smooth = obj.modifiers.new(name='Pudin Corrective Smooth', type='CORRECTIVE_SMOOTH')
+        return {'FINISHED'}
+
+class OBJECT_OT_ToggleViewportVisibility(bpy.types.Operator):
+    bl_label = "Toggle Viewport Visibility"
+    bl_idname = "object.toggle_viewport_visibility"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+        obj = context.object
+        if obj and obj.type == 'MESH':
+            cloth = obj.modifiers.get('Cloth')
+            if cloth:
+                new_state = not cloth.show_viewport
+                actualizar_visibilidad_modificadores(obj, new_state, cloth.show_render)
+        return {'FINISHED'}
+
+class OBJECT_OT_ToggleRenderVisibility(bpy.types.Operator):
+    bl_label = "Toggle Render Visibility"
+    bl_idname = "object.toggle_render_visibility"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+        obj = context.object
+        if obj and obj.type == 'MESH':
+            cloth = obj.modifiers.get('Cloth')
+            if cloth:
+                new_state = not cloth.show_render
+                actualizar_visibilidad_modificadores(obj, cloth.show_viewport, new_state)
         return {'FINISHED'}
 
 class OBJECT_OT_HornearSimulacionPudin(bpy.types.Operator):
@@ -211,6 +275,8 @@ def update_original_values(self, context):
 def register():
     bpy.utils.register_class(PUDIN_PT_Panel)
     bpy.utils.register_class(OBJECT_OT_AplicarParametrosPudin)
+    bpy.utils.register_class(OBJECT_OT_ToggleViewportVisibility)
+    bpy.utils.register_class(OBJECT_OT_ToggleRenderVisibility)
     bpy.utils.register_class(OBJECT_OT_EliminarModificadorPudin)
     bpy.utils.register_class(OBJECT_OT_ToggleCorrectiveSmooth)
     bpy.utils.register_class(OBJECT_OT_HornearSimulacionPudin)
@@ -224,14 +290,14 @@ def register():
     )
     bpy.types.Object.pudin_elasticidad = bpy.props.FloatProperty(
         name="Elasticidad", 
-        description="Valores más altos aumentan la rigidez. Si empieza a vibrar aumentar la simulación y/o la amortiguación", 
+        description="Controla la elasticidad al moverse. 0 = elasticidad máxima. Valores altos hacen vibrar la malla (puede corregirse aumentando la calidad de la simulación y/o aumentando la amortiguación)", 
         default=1.0, 
         min=0.0,
         update=update_original_values
     )
     bpy.types.Object.pudin_amortiguacion = bpy.props.FloatProperty(
         name="Amortiguación", 
-        description="Controla cuánto puede comprimirse y estirarse. Valores más altos aumentan la resistencia", 
+        description="Controla cuánto puede comprimirse y estirarse. Valores más altos aumentan la resistencia a la deformación", 
         default=1.0, 
         min=0.0,
         update=update_original_values
@@ -252,7 +318,7 @@ def register():
     )
     bpy.types.Object.pudin_multiplicador = bpy.props.FloatProperty(
         name="Multiplicador", 
-        description="Multiplica los efectos calculados, ideal al subdividir o cambiar el número de polígonos", 
+        description="Multiplica los efectos calculados, útil tras subdividir o cambiar el número de polígonos", 
         default=1.0, 
         min=0.1
     )
@@ -284,7 +350,8 @@ def register():
 def unregister():
     bpy.utils.unregister_class(PUDIN_PT_Panel)
     bpy.utils.unregister_class(OBJECT_OT_AplicarParametrosPudin)
-    bpy.utils.unregister_class(OBJECT_OT_AplicarMultiplicadorPudin)
+    bpy.utils.unregister_class(OBJECT_OT_ToggleViewportVisibility)
+    bpy.utils.unregister_class(OBJECT_OT_ToggleRenderVisibility)
     bpy.utils.unregister_class(OBJECT_OT_EliminarModificadorPudin)
     bpy.utils.unregister_class(OBJECT_OT_ToggleCorrectiveSmooth)
     bpy.utils.unregister_class(OBJECT_OT_HornearSimulacionPudin)
