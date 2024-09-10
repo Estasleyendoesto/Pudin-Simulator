@@ -5,7 +5,7 @@ bl_info = {
     "blender": (4, 2, 0),
     "category": "Object",
     "version": (1, 2),
-    "location": "Tool",
+    "location": "Edit",
 }
 
 import bpy
@@ -36,7 +36,7 @@ class PUDIN_PT_Panel(bpy.types.Panel):
     bl_idname = "PUDIN_PT_panel"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Tool'
+    bl_category = 'Edit'
     
     def draw(self, context):
         layout = self.layout
