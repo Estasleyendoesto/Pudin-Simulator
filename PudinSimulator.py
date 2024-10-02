@@ -1,11 +1,45 @@
 bl_info = {
     "name": "Pudin Simulator",
     "description": "Simulador de pudin mediante el simulador de tela y usando un lenguaje comprensivo.",
-    "author": "Estasleyendoesto",
+    "author": "EEsto",
     "blender": (4, 2, 0),
     "category": "Object",
-    "version": (1, 2),
-    "location": "Edit",
+    "version": (1, 2, 1),
+    "location": "Viewport 3D",
+}
+
+lang = {
+    "simulation_quality": "Calidad de Simulación",
+    "collision_quality": "Calidad de Colisión",
+    "simulation_velocity": "Velocidad de Simulación",
+    "gravity": "Gravedad",
+    "mass": "Peso",
+    "flex": "Elasticidad",
+    "resistance": "Amortiguación",
+    "air": "Inflado",
+    "viscosity": "Viscosidad",
+    "multiplier": "Multiplicador",
+    "apply_changes": "Aplicar Parámetros",
+    "start": "Inicio",
+    "end": "Fin",
+    "bake": "Hornear Simulación",
+    "delete_baked": "Eliminar Caché",
+    "apply_simulator": "Aplicar Simulador",
+    "mass_name": "Peso (Masa)",
+    "mass_desc": "Controla el peso del objeto",
+    "flex_name": "Elasticidad",
+    "flex_desc": "Determina cuánto se estira o comprime la malla. Valor de 0: Altamente deformable. Valores superiores a 5000: Menos deformable, muy rígido. Si vibra aumentar la simulación o amortiguación.",
+    "resistance_name": "Amortiguación",
+    "resistance_desc": "Controla la fuerza de rebote. Valor de 0: Genera rebotes visibles. Valores superiores a 5000: Evita cualquier rebote.",
+    "air_name": "Inflado Interior",
+    "air_desc": "Añade volumen a la malla, similar al inflado de un globo de aire.",
+    "viscosity_name": "Viscosidad",
+    "viscosity_desc": "Hace que la malla se comporte de manera viscosa. Produce ondulaciones al moverse y colisionar. Aumentar la masa puede romper la simulación. Solución: bajar este parámetro hasta corregirlo.",
+    "multiplier_name": "Multiplicador",
+    "multiplier_desc": "Multiplica los efectos calculados, útil al subdividir, decimar o cambiar el número de polígonos",
+    "simulation_section": "Simulation",
+    "settings_section": "Settings",
+    "bake_section": "Bake",
 }
 
 import bpy
@@ -36,7 +70,7 @@ class PUDIN_PT_Panel(bpy.types.Panel):
     bl_idname = "PUDIN_PT_panel"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Edit'
+    bl_category = 'Pudin'
     
     def draw(self, context):
         layout = self.layout
@@ -73,34 +107,34 @@ class PUDIN_PT_Panel(bpy.types.Panel):
                 layout.prop_search(cloth.settings, "vertex_group_mass", obj, "vertex_groups", text="")
                 
                 layout.separator()
-                layout.label(text="Simulation")
-                layout.prop(cloth.settings, 'quality', text="Calidad de Simulación")
-                layout.prop(cloth.collision_settings, 'collision_quality', text="Calidad de Colisión")
-                layout.prop(cloth.settings, 'time_scale', text="Velocidad de Simulación")
-                layout.prop(cloth.settings.effector_weights, 'gravity', text="Gravedad")
+                layout.label(text=lang['simulation_section'])
+                layout.prop(cloth.settings, 'quality', text=lang['simulation_quality'])
+                layout.prop(cloth.collision_settings, 'collision_quality', text=lang['collision_quality'])
+                layout.prop(cloth.settings, 'time_scale', text=lang['simulation_velocity'])
+                layout.prop(cloth.settings.effector_weights, 'gravity', text=lang['gravity'])
                 
                 layout.separator()
-                layout.label(text="Settings")
-                layout.prop(obj, 'pudin_masa', text="Peso")
-                layout.prop(obj, 'pudin_elasticidad', text="Elasticidad")
-                layout.prop(obj, 'pudin_amortiguacion', text="Amortiguación")
-                layout.prop(obj, 'pudin_inflado_interior', text="Inflado")
-                layout.prop(obj, 'pudin_viscosidad', text="Viscosidad")
-                layout.prop(obj, 'pudin_multiplicador', text="Multiplicador")
+                layout.label(text=lang['settings_section'])
+                layout.prop(obj, 'pudin_masa', text=lang['mass'])
+                layout.prop(obj, 'pudin_elasticidad', text=lang['flex'])
+                layout.prop(obj, 'pudin_amortiguacion', text=lang['resistance'])
+                layout.prop(obj, 'pudin_inflado_interior', text=lang['air'])
+                layout.prop(obj, 'pudin_viscosidad', text=lang['viscosity'])
+                layout.prop(obj, 'pudin_multiplicador', text=lang['multiplier'])
 
-                layout.operator("object.aplicar_parametros_pudin", text="Aplicar Parámetros")
+                layout.operator("object.aplicar_parametros_pudin", text=lang['apply_changes'])
                 
                 layout.separator()
-                layout.label(text="Bake")
+                layout.label(text=lang['bake_section'])
                 
                 row = layout.row()
-                row.prop(context.scene, 'frame_start', text="Inicio")
-                row.prop(context.scene, 'frame_end', text="Fin")
+                row.prop(context.scene, 'frame_start', text=lang['start'])
+                row.prop(context.scene, 'frame_end', text=lang['end'])
                 
-                layout.operator("object.hornear_simulacion_pudin", text="Hornear Simulación")         
-                layout.operator("object.eliminar_cache_pudin", text="Eliminar Caché")
+                layout.operator("object.hornear_simulacion_pudin", text=lang['bake'])         
+                layout.operator("object.eliminar_cache_pudin", text=lang['delete_baked'])
             else:
-                layout.operator("object.aplicar_parametros_pudin", text="Aplicar Simulador")
+                layout.operator("object.aplicar_parametros_pudin", text=lang['apply_simulator'])
 
 class OBJECT_OT_AplicarParametrosPudin(bpy.types.Operator):
     bl_label = "Aplicar Parámetros Pudin"
@@ -131,6 +165,7 @@ class OBJECT_OT_AplicarParametrosPudin(bpy.types.Operator):
                     obj.pudin_original_inflado_interior = inflado_interior
                     obj.pudin_original_viscosidad = viscosidad
                     obj.pudin_original_masa = masa
+                    masa = 1.0
                     
                     obj.pudin_first = False
                     
@@ -282,43 +317,43 @@ def register():
     bpy.utils.register_class(OBJECT_OT_HornearSimulacionPudin)
     bpy.utils.register_class(OBJECT_OT_EliminarCachePudin)
     bpy.types.Object.pudin_masa = bpy.props.FloatProperty(
-        name="Peso (Masa)", 
-        description="Controla el peso del objeto", 
+        name=lang['mass_name'], 
+        description=lang['mass_desc'], 
         default=0.3, 
         min=0.0,
         update=update_original_values
     )
     bpy.types.Object.pudin_elasticidad = bpy.props.FloatProperty(
-        name="Elasticidad", 
-        description="Controla la elasticidad al moverse. 0 = elasticidad máxima. Valores altos hacen vibrar la malla (puede corregirse aumentando la calidad de la simulación y/o aumentando la amortiguación)", 
+        name=lang['flex_name'], 
+        description=lang['flex_desc'], 
         default=1.0, 
         min=0.0,
         update=update_original_values
     )
     bpy.types.Object.pudin_amortiguacion = bpy.props.FloatProperty(
-        name="Amortiguación", 
-        description="Controla cuánto puede comprimirse y estirarse. Valores más altos aumentan la resistencia a la deformación", 
+        name= lang['resistance_name'], 
+        description=lang['resistance_desc'], 
         default=1.0, 
         min=0.0,
         update=update_original_values
     )
     bpy.types.Object.pudin_inflado_interior = bpy.props.FloatProperty(
-        name="Inflado Interior", 
-        description="Infla el objeto igual que un globo de aire", 
+        name=lang['air_name'], 
+        description=lang['air_desc'], 
         default=0.0, 
         min=0.0,
         update=update_original_values
     )
     bpy.types.Object.pudin_viscosidad = bpy.props.FloatProperty(
-        name="Viscosidad", 
-        description="Hace que se comporte como un globo de agua", 
+        name=lang['viscosity_name'], 
+        description=lang['viscosity_desc'], 
         default=0.0, 
         min=0.0,
         update=update_original_values
     )
     bpy.types.Object.pudin_multiplicador = bpy.props.FloatProperty(
-        name="Multiplicador", 
-        description="Multiplica los efectos calculados, útil tras subdividir o cambiar el número de polígonos", 
+        name=lang['multiplier_name'], 
+        description=lang['multiplier_desc'], 
         default=1.0, 
         min=0.1
     )
