@@ -1,3 +1,5 @@
+<p align="center"><img src="pudin.jpg"></p>
+
 # Pudin Simulator - Guía Técnica
 
 Esta guía cubre los principales parámetros para ajustar la simulación del addon "Pudin Simulator" y optimizar el comportamiento de la malla en Blender 4.2.
